@@ -9,7 +9,7 @@ class WPConvertApiIntegration {
     
     function __construct() {
         $this->set_handler();
-        add_filter( 'wp_generate_attachment_metadata', array( $this, 'generate_webp_on_resize' ), 10, 2 );
+        add_filter( 'wp_generate_attachment_metadata', array( $this, 'convert_on_resize' ), 10, 2 );
     }
 
     public function set_handler() {
@@ -20,39 +20,88 @@ class WPConvertApiIntegration {
         }
         
         $this->handler = ConvertApi::class;
-        $this->handler::setApiSecret( $key );
+        $response = $this->handler::setApiSecret( $key );
     }
 
     public function get_handler() {
         return $this->handler;
     }
 
-    public function generate_webp_on_resize( $metadata, $attachment_id ) {
+    protected function get_convert_filetypes() {
+        return [
+            'webp'
+        ];
+    }
+
+    public function convert_on_resize( $metadata, $attachment_id ) {
         $file_path_arr = explode( DIRECTORY_SEPARATOR, $metadata['file'] );
-        $mime_type = false;
+        $file_type = false;
+        $convert_filetypes = $this->get_convert_filetypes();
 
         foreach( $metadata['sizes'] as $size ) {
             $filepath = wp_get_upload_dir()['basedir'] . DIRECTORY_SEPARATOR . $file_path_arr[0] . DIRECTORY_SEPARATOR . $file_path_arr[1] . DIRECTORY_SEPARATOR . $size['file'];
-            $mime_type = $size['mime-type'];
-            $this->generate_webp( $filepath, $mime_type, $attachment_id );
+            $file_type = array_pop( explode( '.', $size['file'] ) );
+
+            if( ! $file_type ) {
+                continue;
+            }
+            
+            foreach( $convert_filetypes as $new_filetype ) {
+                $this->convert_file( [
+                    'current_filetype' => $file_type,
+                    'new_filetype' => $new_filetype,
+                    'filepath' => $filepath,
+                ] );
+            }
+            unset( $new_filetype );
         }
 
-        $this->generate_webp( wp_get_upload_dir()['basedir'] . DIRECTORY_SEPARATOR . $metadata['file'], $mime_type, $attachment_id );
-        
+        if( ! $file_type ) {
+            return $metadata;
+        }
+
+        foreach( $convert_filetypes as $new_filetype ) {
+            $this->convert_file( [
+                'current_filetype' => $file_type,
+                'new_filetype' => $new_filetype,
+                'filepath' => wp_get_upload_dir()['basedir'] . DIRECTORY_SEPARATOR . $metadata['file'],
+            ] );
+        }
+
         return $metadata;
     }
 
-    protected function generate_webp( $filepath, $file_type, $attachment_id ) {
+    /**
+     *
+     * Converts a file from one filetype to another.
+     *
+     * @param array $arguments Array containing the necessary configuration
+     *      $arguments = [
+     *          'current_filetype' => (string) Current filetype extension, e.g. 'jpg'. *Required* 
+     *          'new_filetype' => (string) Desired new filetype extension, e.g. 'webp'. *Required* 
+     *          'filepath' => (string) Absolute path to the file. *Required*
+     *      ]
+     * 
+     * @return void
+     *
+     */
+    protected function convert_file( $arguments ) {
         $handler = $this->get_handler();
     
         $result = $handler::convert( 
-            'webp', 
+            $arguments['new_filetype'], 
             [
-                'File' => $filepath,
+                'File' => $arguments['filepath'],
             ], 
-            'jpg'
+            $arguments['current_filetype']
         );
         
-        $result->saveFiles( $filepath . '.webp' );
+        $result->saveFiles( 
+            sprintf( 
+                '%s.%s',
+                $arguments['filepath'], 
+                $arguments['new_filetype']  
+            )
+        );
     }
 }
