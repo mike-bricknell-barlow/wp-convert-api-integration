@@ -26,6 +26,29 @@
 
                                 <?php
                                 break;
+
+                            case 'checkbox': 
+                                echo sprintf( 
+                                    '<th><label for="%s">%s</label></th>',
+                                    esc_html( $field['id'] ),
+                                    esc_html( $field['label'] ),
+                                );
+                                echo sprintf( '<td><p>%s</p>', esc_html( $field['description'] ) );
+
+                                foreach( WPCAI\WPConvertApiIntegrationAdmin::get_filetype_options() as $filetype ) {
+                                    echo sprintf(
+                                        '<label for="%s">%s</label><input type="checkbox" value="%s" name="%s[]" id="%s" %s />',
+                                        $field['id'] . '-' . $filetype,
+                                        $filetype,
+                                        $filetype,
+                                        $field['id'],
+                                        $field['id'] . '-' . $filetype,
+                                        ( in_array( $filetype, $field['value'] ) ) ? 'checked' : ''
+                                    );
+                                }
+
+                                echo '</td>';
+                                break;
                         }
                     echo '</tr>';
                 }

@@ -9,7 +9,8 @@ class WPConvertApiIntegration {
     
     function __construct() {
         $this->set_handler();
-        add_filter( 'wp_generate_attachment_metadata', array( $this, 'convert_on_resize' ), 10, 2 );
+        add_filter( 'wp_generate_attachment_metadata', [ $this, 'convert_on_resize' ], 10, 2 );
+        add_filter( 'wp_delete_file', [ $this, 'delete_converted' ] );
     }
 
     public function set_handler() {
@@ -28,9 +29,22 @@ class WPConvertApiIntegration {
     }
 
     protected function get_convert_filetypes() {
-        return [
-            'webp'
-        ];
+        return get_option( 'wp-convert-api-integration-allowed-filetypes' );
+    }
+
+    public function delete_converted( $file ) {
+        $filetypes = \WPCAI\WPConvertApiIntegrationAdmin::get_filetype_options();
+
+        foreach( $filetypes as $filetype ) {
+            if( ! file_exists( $file . '.' . $filetype ) ) {
+                // No converted file of this type exists
+                continue;
+            }
+
+            unlink( $file . '.' . $filetype );
+        }
+        
+        return $file;
     }
 
     public function convert_on_resize( $metadata, $attachment_id ) {
