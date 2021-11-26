@@ -99,7 +99,7 @@ class WPConvertApiIntegration {
      * @return void
      *
      */
-    protected function convert_file( $arguments ) {
+    public function convert_file( $arguments ) {
         $handler = $this->get_handler();
     
         $result = $handler::convert( 
@@ -117,5 +117,10 @@ class WPConvertApiIntegration {
                 $arguments['new_filetype']  
             )
         );
+    }
+
+    public static function wpcai_convert_file( $arguments ) {
+        $class_handler = new WPConvertApiIntegration();
+        $class_handler->convert_file( $arguments );
     }
 }

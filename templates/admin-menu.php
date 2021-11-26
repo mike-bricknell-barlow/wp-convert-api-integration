@@ -35,6 +35,7 @@
                                 );
                                 echo sprintf( '<td><p>%s</p>', esc_html( $field['description'] ) );
 
+                                $selected_types = ( is_array( $field['value'] ) ) ? $field['value'] : [];
                                 foreach( WPCAI\WPConvertApiIntegrationAdmin::get_filetype_options() as $filetype ) {
                                     echo sprintf(
                                         '<label for="%s">%s</label><input type="checkbox" value="%s" name="%s[]" id="%s" %s />',
@@ -43,7 +44,7 @@
                                         $filetype,
                                         $field['id'],
                                         $field['id'] . '-' . $filetype,
-                                        ( in_array( $filetype, $field['value'] ) ) ? 'checked' : ''
+                                        ( in_array( $filetype, $selected_types ) ) ? 'checked' : ''
                                     );
                                 }
 
